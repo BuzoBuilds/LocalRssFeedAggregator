@@ -12,7 +12,9 @@ import org.xml.sax.SAXException;
 public class App {
     public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException {
         ArticlesModule articlesModule = new ArticlesModule(); 
-        String feed = articlesModule.getFeed();
-        System.out.println(feed);
+        EmailModule emailModule = new EmailModule("/home/amby/ProjCreds/rssEmailCreds"); 
+    
+        String feed = articlesModule.getFeed(); 
+        emailModule.sendEmailToAddressesInAddressBook("FREAKED OUT GEEK OUT!!!", feed);
     }
 }
