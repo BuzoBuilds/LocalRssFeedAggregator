@@ -11,10 +11,8 @@ import org.xml.sax.SAXException;
  */
 public class App {
     public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException {
-        ArticlesModule articlesModule = new ArticlesModule(); 
-        EmailModule emailModule = new EmailModule("/home/amby/ProjCreds/rssEmailCreds"); 
-    
+        ArticlesModule articlesModule = new ArticlesModule("/home/amby/reposTheBuzoTechie/rssFeedAggregator/res/articleSources", 50, 500); 
         String feed = articlesModule.getFeed(); 
-        emailModule.sendEmailToAddressesInAddressBook("FREAKED OUT GEEK OUT!!!", feed);
+        System.out.println(feed);
     }
 }
