@@ -94,7 +94,7 @@ public class ArticlesModule {
             String line = reader.readLine(); 
             while(line != null){
                 String[] splitedLine = line.split(",");
-                articleSourceList.add(new ArticleSource(Integer.parseInt(splitedLine[0]), splitedLine[1]));
+                articleSourceList.add(new ArticleSource(Integer.parseInt(splitedLine[0].trim()), splitedLine[1].trim()));
                 line = reader.readLine();
             }  
         }
@@ -105,10 +105,14 @@ public class ArticlesModule {
     private String makeRssFeedRequest(String rssLink) throws IOException{
         URL url = new URL(rssLink); 
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection(); 
+        con.addRequestProperty("User-Agent", "Mozilla/4.0"); 
         con.setRequestMethod("GET"); 
         con.setInstanceFollowRedirects(true);  
         int responseCode = con.getResponseCode();
         if(responseCode != HttpsURLConnection.HTTP_OK){
+            if(con.getErrorStream() != null){
+                Utils.printError(con.getErrorStream().toString());
+            }
             throw new IOException("Request to RSS Feed link " + rssLink + " failed with error number " + responseCode);
         } 
 
@@ -255,7 +259,8 @@ public class ArticlesModule {
             } 
             else if(qName.equalsIgnoreCase("description")){
                 if(inItem){
-                    currArticleDesc = sb.toString();
+                    int endIdx = sb.toString().length() > 500? 500 : sb.toString().length();
+                    currArticleDesc = sb.toString().substring(0, endIdx);
                 }
             }
             else if(qName.equalsIgnoreCase("item")){
@@ -325,6 +330,8 @@ public class ArticlesModule {
             }
             else if(qName.equalsIgnoreCase("summary")){
                 if(inItem){
+                    int endIdx = sb.toString().length() > 500? 500 : sb.toString().length();
+                    currArticleDesc = sb.toString().substring(0, endIdx);
                     currArticleDesc = sb.toString();
                 }
             }
