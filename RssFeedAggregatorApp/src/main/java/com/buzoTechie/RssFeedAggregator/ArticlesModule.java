@@ -1,10 +1,12 @@
 package com.buzoTechie.RssFeedAggregator;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,6 +129,56 @@ public class ArticlesModule {
         return sb.toString();
     }
 
+    public String listSrcs(){
+        ArrayList<ArticleSource> articleSources;
+        try {
+            articleSources = this.loadArticleSourcesFile();
+        } catch (IOException e) {
+            System.err.println(e); 
+            Utils.printError("rss src file can't be found");
+            return null;
+        }  
+
+        StringBuilder sb = new StringBuilder(); 
+        for(int i = 0; i < articleSources.size(); i++){
+            sb.append(articleSources.get(i) + "\n"); 
+        } 
+        return sb.toString();
+    } 
+
+    public void addSrc(String rssSrcLink){
+        ArrayList<ArticleSource> articleSources;
+        try {
+            articleSources = this.loadArticleSourcesFile();
+        } catch (IOException e) {
+            System.err.println(e); 
+            Utils.printError("rss src file can't be found; Didn't add src");
+            return;
+        }    
+
+        ArticleSource newSrc = new ArticleSource(articleSources.size(), rssSrcLink); 
+        articleSources.add(newSrc); 
+        try {
+            this.writeArticleSrcListToSrcFile(articleSources);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Utils.printError("Can't write to rss src file, didn't add new rss src");
+        }     
+    } 
+
+    private void writeArticleSrcListToSrcFile(ArrayList<ArticleSource> articleSources) throws IOException{ 
+        try(BufferedWriter writer = Files.newBufferedWriter(articleSourcesFilePath, (OpenOption)null)){
+            for(int i = 0; i < articleSources.size(); i++){
+                ArticleSource src = articleSources.get(i); 
+                String line = "" + src.index + "," + src.link; 
+                if(i != articleSources.size() -1){
+                    line += "\n";
+                } 
+                writer.write(line, 0, line.length());
+            }
+        }
+    }
+
     private ArrayList<Article> parseRssFeed(String xmlRssFeed) throws ParserConfigurationException, SAXException, IOException{
         RssType rssType = determineRssTypeOfXmlFeed(xmlRssFeed); 
 
@@ -177,6 +229,10 @@ public class ArticlesModule {
             this.index = idx; 
             this.link = link;
         } 
+
+        public String toString(){
+            return "" + index + " -> " + link;
+        }
     }
 
     private static class Article{
