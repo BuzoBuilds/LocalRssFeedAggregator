@@ -1,4 +1,9 @@
-0, https://hackernoon.com/feed
-1, https://www.reddit.com/r/ExperiencedDevs/top/.rss?t=month 
-2, https://martinfowler.com/feed.atom
-3, https://dev.to/feed
+0,https://hackernoon.com/feed
+1,https://www.reddit.com/r/ExperiencedDevs/top/.rss?t=month
+2,https://martinfowler.com/feed.atom
+3,https://dev.to/feed
+4,https://feeds.dzone.com/home
+6,http://feeds.feedburner.com/techtarget/tsscom/home
+8,http://feeds.feedburner.com/freetechbooks
+9,http://syndication.thedailywtf.com/TheDailyWtf
+10,http://lambda-the-ultimate.org/rss.xml

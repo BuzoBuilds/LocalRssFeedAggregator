@@ -8,6 +8,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -164,10 +165,33 @@ public class ArticlesModule {
             e.printStackTrace();
             Utils.printError("Can't write to rss src file, didn't add new rss src");
         }     
+
+        Utils.printMsg("Successfully added rss src " + rssSrcLink);
     } 
+    
+    public void rmSrc(int srcIndex){
+        ArrayList<ArticleSource> articleSources; 
+        try{
+            articleSources = this.loadArticleSourcesFile();
+            if(srcIndex >= articleSources.size() || srcIndex < 0){
+                Utils.printError("srcIndex doesn't exist in rss source file");
+                return;
+            } 
+
+            articleSources.remove(srcIndex); 
+            this.writeArticleSrcListToSrcFile(articleSources);
+        }
+        catch(IOException e){
+            System.err.println(e); 
+            Utils.printError("rss src file can't be found; Didn't remove src");
+            return;
+        }
+
+        Utils.printMsg("Successfully removed rss src at index " + srcIndex);
+    }
 
     private void writeArticleSrcListToSrcFile(ArrayList<ArticleSource> articleSources) throws IOException{ 
-        try(BufferedWriter writer = Files.newBufferedWriter(articleSourcesFilePath, (OpenOption)null)){
+        try(BufferedWriter writer = Files.newBufferedWriter(articleSourcesFilePath, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)){
             for(int i = 0; i < articleSources.size(); i++){
                 ArticleSource src = articleSources.get(i); 
                 String line = "" + src.index + "," + src.link; 
