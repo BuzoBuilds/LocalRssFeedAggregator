@@ -3,7 +3,6 @@
 2,https://martinfowler.com/feed.atom
 3,https://dev.to/feed
 4,https://feeds.dzone.com/home
-6,http://feeds.feedburner.com/techtarget/tsscom/home
-8,http://feeds.feedburner.com/freetechbooks
-9,http://syndication.thedailywtf.com/TheDailyWtf
-10,http://lambda-the-ultimate.org/rss.xml
+5,https://feeds.feedburner.com/freetechbooks
+6,https://syndication.thedailywtf.com/TheDailyWtf
+7,https://feeds.feedburner.com/techtarget/tsscom/home

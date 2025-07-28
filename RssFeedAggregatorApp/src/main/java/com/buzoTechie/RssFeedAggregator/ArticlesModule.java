@@ -20,6 +20,7 @@ import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler; 
 import java.io.StringReader;
 
@@ -69,18 +70,19 @@ public class ArticlesModule {
                 break; 
             } 
 
-            String output;
+            ArticleSource currArticleSource = articleSources.get(i);
             try{
-                output = makeRssFeedRequest(articleSources.get(i).link); 
+                String output = makeRssFeedRequest(currArticleSource.link); 
+                ArrayList<Article> articlesFromCurrSrc = parseRssFeed(output);  
+                int exEndIdx = numOfArticlesInFeed > articlesFromCurrSrc.size()? articlesFromCurrSrc.size() : numOfArticlesInFeed; 
+                feedPool.addAll(articlesFromCurrSrc.subList(0, exEndIdx)); 
             }
-            catch(IOException e){
-                Utils.printWarning(e.getMessage() + " skipping...");
+            catch(IOException | SAXException e){ 
+                e.printStackTrace();
+                Utils.printWarning( "\n \n skipping " + currArticleSource.link + " idx: " + currArticleSource.index + " ...");
                 continue;
             } 
 
-            ArrayList<Article> articlesFromCurrSrc = parseRssFeed(output);  
-            int exEndIdx = numOfArticlesInFeed > articlesFromCurrSrc.size()? articlesFromCurrSrc.size() : numOfArticlesInFeed; 
-            feedPool.addAll(articlesFromCurrSrc.subList(0, exEndIdx)); 
         }
 
         Collections.shuffle(feedPool); 
@@ -157,6 +159,14 @@ public class ArticlesModule {
             return;
         }    
 
+        //change http to https
+        if(rssSrcLink.substring(0,5).equals("http:")){
+            StringBuilder sb = new StringBuilder(); 
+            sb.append("https:"); 
+            sb.append(rssSrcLink.substring(5)); 
+            rssSrcLink = sb.toString();
+        } 
+
         ArticleSource newSrc = new ArticleSource(articleSources.size(), rssSrcLink); 
         articleSources.add(newSrc); 
         try {
@@ -194,7 +204,7 @@ public class ArticlesModule {
         try(BufferedWriter writer = Files.newBufferedWriter(articleSourcesFilePath, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)){
             for(int i = 0; i < articleSources.size(); i++){
                 ArticleSource src = articleSources.get(i); 
-                String line = "" + src.index + "," + src.link; 
+                String line = "" + i + "," + src.link; 
                 if(i != articleSources.size() -1){
                     line += "\n";
                 } 
@@ -204,18 +214,29 @@ public class ArticlesModule {
     }
 
     private ArrayList<Article> parseRssFeed(String xmlRssFeed) throws ParserConfigurationException, SAXException, IOException{
-        RssType rssType = determineRssTypeOfXmlFeed(xmlRssFeed); 
+        try{
+            RssType rssType = determineRssTypeOfXmlFeed(xmlRssFeed); 
 
-        switch(rssType){
-            case RSS: {
-                return parseRssFeedType(xmlRssFeed);
-            }
-            case ATOM: {
-                return parseAtomFeedType(xmlRssFeed);
-            }
-            default : {
-                return null;
-            }
+            switch(rssType){
+                case RSS: {
+                    return parseRssFeedType(xmlRssFeed);
+                }
+                case ATOM: {
+                    return parseAtomFeedType(xmlRssFeed);
+                }
+                default : {
+                    return null;
+                }
+            } 
+        }
+        catch(SAXParseException e){
+            //add attempted parse xml to exception thrown 
+            StringBuilder sb = new StringBuilder(); 
+            sb.append(e.getMessage()); 
+            sb.append("\n *** XML THAT WAS ATTEMPTED TO BE PARSED *** \n");  
+            sb.append(xmlRssFeed);
+            SAXException se = new SAXException(sb.toString());  
+            throw se;
         }
     }
 
