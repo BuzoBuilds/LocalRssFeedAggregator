@@ -22,7 +22,7 @@ public class App {
 
     public App() throws ParserConfigurationException, SAXException, IOException{
         articlesModule = new ArticlesModule("/home/amby/reposTheBuzoTechie/rssFeedAggregator/res/articleSources", 50, 500); 
-        emailModule = new EmailModule("/home/amby/ProjCreds/rssEmailCreds");
+        emailModule = new EmailModule("/home/amby/ProjCreds/rssEmailCreds", "/home/amby/reposTheBuzoTechie/rssFeedAggregator/res/addressBook");
     }
 
     private void runCLI(){
@@ -34,6 +34,8 @@ public class App {
         helperSb.append("rmsrc index(int): removes rss source at the index from the rss source file\n"); 
         helperSb.append("genfeed: uses the rss src file to generate a feed and writes it to standard output\n");
         helperSb.append("sendall: generates feed and sends to all emails in address book immediately\n");
+        helperSb.append("lsaddy: lists all email address entries in the address book\n");
+        helperSb.append("addaddy name(string) email(string): adds an email entry into the address book\n");
         helperSb.append("quit: exit program\n"); 
         String helperMsg = helperSb.toString();  
 
@@ -88,6 +90,17 @@ public class App {
                 else if(splitedInputLine[0].equalsIgnoreCase("sendall")){
                     this.sendall();
                 }
+                else if(splitedInputLine[0].equalsIgnoreCase("lsaddy")){
+                    this.listAddressBook();
+                }
+                else if(splitedInputLine[0].equalsIgnoreCase("addaddy")){
+                    if(splitedInputLine.length < 3){
+                        Utils.printError("Invalid args for addaddy command");
+                        System.out.println(helperMsg); 
+                        continue;
+                    }
+                    this.addAddressToAddressBook(splitedInputLine[1], splitedInputLine[2]);
+                }
                 else if(splitedInputLine[0].equalsIgnoreCase("quit")){
                     return;
                 }
@@ -133,6 +146,13 @@ public class App {
             e.printStackTrace();
             Utils.printError("Unable to generate feed, please try again later");
         } 
+    }
 
+    private void listAddressBook(){
+        Utils.printMsg(this.emailModule.listAddressBook());
+    }
+
+    private void addAddressToAddressBook(String name, String emailAddress){
+        this.emailModule.addAddressToAddressBook(name, emailAddress);
     }
 }

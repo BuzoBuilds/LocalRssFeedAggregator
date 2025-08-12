@@ -1,8 +1,11 @@
 package com.buzoTechie.RssFeedAggregator;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -11,15 +14,19 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage; 
 
 public class EmailModule {
+    final private String startOfAddressBookMarker = "***** START OF ADDRESS BOOK *****";
+    final private String endOfAddressBookMarker = "***** END OF ADDRESS BOOK *****";
+
     private String emailAddress;
     private String username; 
     private String password; 
     private String smtpServer; 
     private int smptPort; 
-    
-    private ArrayList<String> addressBook;
+   
+    private Path addressBookPath; 
 
-    public EmailModule(String credsFilePath) throws IOException{
+
+    public EmailModule(String credsFilePath, String addressBookFilePath) throws IOException{
         Path file = Path.of(credsFilePath); 
         List<String> creds = Files.readAllLines(file);  
         String[] credsLine = creds.get(0).split(","); 
@@ -29,17 +36,65 @@ public class EmailModule {
         this.smtpServer = credsLine[3]; 
         this.smptPort = Integer.parseInt(credsLine[4]); 
 
-        addressBook = new ArrayList<String>(); 
-        addressBook.add("thebuzotechieburner1@gmail.com"); 
+        this.addressBookPath = Path.of(addressBookFilePath); 
     } 
+
+    public String listAddressBook(){
+        StringBuilder sb = new StringBuilder();
+        ArrayList<EmailAddress> addressBook;
+        try{
+            addressBook = this.loadAddressBook(); 
+        }
+        catch(IOException e){
+            e.printStackTrace(); 
+            Utils.printError("Unable to list addressbook");
+            return null;
+        }
+
+        sb.append("\n" + this.startOfAddressBookMarker + "\n");
+        for(int i = 0; i < addressBook.size(); i++){
+            sb.append("\t" + addressBook.get(i)); 
+            sb.append("\n");
+        } 
+        sb.append(this.endOfAddressBookMarker);
+
+        return sb.toString();
+
+    }
+
+    public void addAddressToAddressBook(String name, String emailAddress){
+        EmailAddress address = new EmailAddress(name, emailAddress); 
+        ArrayList<EmailAddress> addressBook;
+
+        try{
+            addressBook = this.loadAddressBook(); 
+        }
+        catch(IOException e){
+            e.printStackTrace(); 
+            Utils.printError("Unable to add (" + name + ", " + emailAddress + ") entry to address book");
+            return;
+        }
+
+        addressBook.add(address); 
+
+        try{
+            this.writeAddressBookToAddressBookFile(addressBook);
+        }
+        catch(IOException e){
+            e.printStackTrace(); 
+            Utils.printError("Unable to add (" + name + ", " + emailAddress + ") entry to address book");
+            return;
+        }
+    }
 
     public void test(){
         sendEmailFromAppEmail("thebuzotechieburner1@gmail.com", "Epiosde III Revenge of the Buzo!!!", "data\ndata1\ndata2");
     } 
 
-    public void sendEmailToAddressesInAddressBook(String subject, String msg){
-        for(int i = 0; i < this.addressBook.size(); i++){
-            this.sendEmailFromAppEmail(addressBook.get(i), subject, msg);
+    public void sendEmailToAddressesInAddressBook(String subject, String msg) throws IOException{
+        ArrayList<EmailAddress> addressBook = this.loadAddressBook(); 
+        for(int i = 0; i < addressBook.size(); i++){
+            this.sendEmailFromAppEmail(addressBook.get(i).emailAddress, subject, msg);
         }
     }
 
@@ -71,6 +126,56 @@ public class EmailModule {
             Transport.send(message);
         } catch (MessagingException e) {
             e.printStackTrace();
+        }
+    } 
+
+    private ArrayList<EmailAddress> loadAddressBook() throws IOException{
+        ArrayList<EmailAddress> emailAddressList = new ArrayList<EmailAddress>();
+
+        try(BufferedReader reader = Files.newBufferedReader(this.addressBookPath)){ 
+            String line = reader.readLine(); 
+            while(line != null){
+                String[] splitedLine = line.split(",");
+                emailAddressList.add(new EmailAddress(splitedLine[0].trim(), splitedLine[1].trim()));
+                line = reader.readLine();
+            }  
+        } catch (IOException e) {
+            throw new IOException("Unable to open addressbook file", e);
+        }
+
+        return emailAddressList;
+    } 
+
+
+    private void writeAddressBookToAddressBookFile(ArrayList<EmailAddress> addressBook) throws IOException{ 
+        try(BufferedWriter writer = Files.newBufferedWriter(this.addressBookPath, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)){
+            for(int i = 0; i < addressBook.size(); i++){
+                String line = addressBook.get(i).name + "," + addressBook.get(i).emailAddress; 
+                if(i != addressBook.size() -1){
+                    line += "\n";
+                } 
+                writer.write(line, 0, line.length());
+            }
+        }
+    }
+
+
+
+    class EmailAddress{
+        public String name; 
+        public String emailAddress;
+        public EmailAddress(String name, String email){
+            this.name = name; 
+            this.emailAddress = email;
+        } 
+
+        public String toString(){
+            StringBuilder sb = new StringBuilder(); 
+            sb.append("Name: "); 
+            sb.append(this.name); 
+            sb.append(", email: "); 
+            sb.append(this.emailAddress); 
+            return sb.toString();
         }
     }
 }
