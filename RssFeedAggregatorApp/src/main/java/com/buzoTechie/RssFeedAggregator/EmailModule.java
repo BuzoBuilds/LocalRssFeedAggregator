@@ -98,6 +98,27 @@ public class EmailModule {
         }
     }
 
+    public void removeAddressFromAddressBook(String name){
+        ArrayList<EmailAddress> addressBook;  
+        try{
+            addressBook = this.loadAddressBook(); 
+            ArrayList<EmailAddress> newAddressBook = new ArrayList<EmailAddress>();
+            for(int i = 0; i < addressBook.size(); i++){
+                if(!addressBook.get(i).name.equals(name)){
+                    newAddressBook.add(addressBook.get(i));
+                }
+            } 
+            this.writeAddressBookToAddressBookFile(newAddressBook);
+        }
+        catch(IOException e){
+            System.err.println(e);
+            Utils.printError("addressbook file can't be modified"); 
+            return;
+        }
+
+        Utils.printMsg("Successfully strucketh thy foul being " + name + " from address book");
+    }
+
     private void sendEmailFromAppEmail(String reciver, String subject, String msg){
         Properties prop = new Properties(); 
         prop.put("mail.smtp.host", this.smtpServer); 

@@ -1,4 +1,4 @@
 PROJROOTDIR=$(dirname $0); 
 cd $PROJROOTDIR/RssFeedAggregatorApp 
-mvn exec:java -Dexec.mainClass="com.buzoTechie.RssFeedAggregator.App"
+echo -e "sendall\nquit\n" | mvn exec:java -Dexec.mainClass="com.buzoTechie.RssFeedAggregator.App"
 

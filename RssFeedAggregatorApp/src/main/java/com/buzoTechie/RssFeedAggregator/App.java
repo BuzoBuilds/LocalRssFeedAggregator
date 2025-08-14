@@ -1,6 +1,12 @@
 package com.buzoTechie.RssFeedAggregator;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -35,7 +41,9 @@ public class App {
         helperSb.append("genfeed: uses the rss src file to generate a feed and writes it to standard output\n");
         helperSb.append("sendall: generates feed and sends to all emails in address book immediately\n");
         helperSb.append("lsaddy: lists all email address entries in the address book\n");
-        helperSb.append("addaddy name(string) email(string): adds an email entry into the address book\n");
+        helperSb.append("addaddy: name(string) email(string): adds an email entry into the address book\n");
+        helperSb.append("rmaddy: name(string): remove all email entries associated with name from address book\n");
+        helperSb.append("setjob: hour(int) minute(int): set time for feed to be automatically generated and sent to members in address book\n");
         helperSb.append("quit: exit program\n"); 
         String helperMsg = helperSb.toString();  
 
@@ -101,6 +109,42 @@ public class App {
                     }
                     this.addAddressToAddressBook(splitedInputLine[1], splitedInputLine[2]);
                 }
+                else if(splitedInputLine[0].equalsIgnoreCase("rmaddy")){
+                    if(splitedInputLine.length < 2){
+                        Utils.printError("Invalid args for rmaddy command");
+                        System.out.println(helperMsg); 
+                        continue;
+                    }
+                    this.removeAddressFromAddressBook(splitedInputLine[1]);
+                }
+                else if(splitedInputLine[0].equalsIgnoreCase("setjob")){ 
+                    int hour; 
+                    int minute;
+                    if((splitedInputLine.length < 3)){
+                        Utils.printError("Invalid args for setjob command");
+                        System.out.println(helperMsg); 
+                        continue;
+                    }
+                    try{
+                        hour = Integer.parseInt(splitedInputLine[1]);
+                        minute = Integer.parseInt(splitedInputLine[2]);
+                        if(hour < 0 || hour > 23 || minute < 0 || minute > 59){
+                            throw new NumberFormatException();
+                        }
+                    }
+                    catch(NumberFormatException e){
+                        e.printStackTrace(); 
+                        Utils.printError("setjob arguments: hour = [0,23]; minute = [0,59]");
+                        continue;
+                    }
+                    try {
+                        this.setDailyJob(hour, minute);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Utils.printError("Unable to set cronjob");
+                        continue;
+                    }
+                }
                 else if(splitedInputLine[0].equalsIgnoreCase("quit")){
                     return;
                 }
@@ -154,5 +198,49 @@ public class App {
 
     private void addAddressToAddressBook(String name, String emailAddress){
         this.emailModule.addAddressToAddressBook(name, emailAddress);
+    }
+
+    private void removeAddressFromAddressBook(String name){
+        this.emailModule.removeAddressFromAddressBook(name);
+    }
+
+    private void setDailyJob(int hour, int minute) throws IOException{
+        //get current crontab jobs
+        File temp = new File("temp");  
+        ProcessBuilder pb = new ProcessBuilder("crontab -l"); 
+        pb.redirectOutput(temp);  
+        pb.start();
+        List<String> currCronJobs = Files.readAllLines(temp.toPath());  
+
+
+        //remove any potential rssAggreator jobs
+        List<String> newCronJobs = new ArrayList<String>(); 
+        for(int i = 0; i < currCronJobs.size(); i++){
+            if(!currCronJobs.get(i).contains("rssFeedAggregator/genAndSendFeed.sh")){
+                newCronJobs.add(currCronJobs.get(i));
+            }
+        } 
+
+        //add new rssAggreagtor job 
+        StringBuilder sb = new StringBuilder(); 
+        sb.append(hour); 
+        sb.append(" "); 
+        sb.append(minute); 
+        sb.append(" * * * ~/reposTheBuzoTechie/rssFeedAggregator/genAndSendFeed.sh");
+        newCronJobs.add(sb.toString());  
+
+        StringBuilder allCronJobs = new StringBuilder();
+        for(int i = 0; i < newCronJobs.size(); i++){
+            allCronJobs.append(newCronJobs.get(i)); 
+            if(i != newCronJobs.size() -1){
+                allCronJobs.append("\n");
+            }
+        } 
+
+        Files.write(temp.toPath(), allCronJobs.toString().getBytes(), StandardOpenOption.WRITE);
+
+        //redirect temp file to set new cron jobs 
+        ProcessBuilder pb2 = new ProcessBuilder("temp > crontab"); 
+        pb2.start();
     }
 }
