@@ -148,6 +148,7 @@ public class App {
                     }
                 }
                 else if(splitedInputLine[0].equalsIgnoreCase("quit")){
+                    Utils.printMsg("Goodbye :)");
                     return;
                 }
                 else{
@@ -247,8 +248,8 @@ public class App {
         Process p2 = pb2.start();
         p2.waitFor();
 
-        Utils.printMsg("Job set! Feed will be automatically generated and sent everyday at " + hour + ":" + minute);
+        temp.delete();
 
-
+        Utils.printMsg("Job set! Feed will be automatically generated and sent everyday at " + String.format("%02d", hour) + ":" + String.format("%02d", minute));
     }
 }
