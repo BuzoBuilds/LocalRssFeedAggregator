@@ -7,6 +7,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -60,6 +61,7 @@ public class App {
                 //preprocess
                 inputLine = inputLine.trim();
                 String[] splitedInputLine = inputLine.split("\\s+");  
+                Utils.printMsg("Processing Command: " + splitedInputLine[0]);
 
                 if(splitedInputLine[0].equalsIgnoreCase("help")){
                     System.out.println(helperMsg);
@@ -139,7 +141,7 @@ public class App {
                     }
                     try {
                         this.setDailyJob(hour, minute);
-                    } catch (IOException e) {
+                    } catch (IOException | InterruptedException e) {
                         e.printStackTrace();
                         Utils.printError("Unable to set cronjob");
                         continue;
@@ -204,13 +206,15 @@ public class App {
         this.emailModule.removeAddressFromAddressBook(name);
     }
 
-    private void setDailyJob(int hour, int minute) throws IOException{
+    private void setDailyJob(int hour, int minute) throws IOException, InterruptedException{
         //get current crontab jobs
         File temp = new File("temp");  
-        ProcessBuilder pb = new ProcessBuilder("crontab -l"); 
+        ProcessBuilder pb = new ProcessBuilder("/usr/bin/crontab", "-l"); 
         pb.redirectOutput(temp);  
-        pb.start();
+        Process p1 = pb.start();
+        p1.waitFor();
         List<String> currCronJobs = Files.readAllLines(temp.toPath());  
+        
 
 
         //remove any potential rssAggreator jobs
@@ -223,24 +227,28 @@ public class App {
 
         //add new rssAggreagtor job 
         StringBuilder sb = new StringBuilder(); 
-        sb.append(hour); 
-        sb.append(" "); 
         sb.append(minute); 
-        sb.append(" * * * ~/reposTheBuzoTechie/rssFeedAggregator/genAndSendFeed.sh");
+        sb.append(" "); 
+        sb.append(hour); 
+        sb.append(" * * * ~/reposTheBuzoTechie/rssFeedAggregator/genAndSendFeed.sh >> ~/rssLog 2>&1");
         newCronJobs.add(sb.toString());  
 
         StringBuilder allCronJobs = new StringBuilder();
         for(int i = 0; i < newCronJobs.size(); i++){
             allCronJobs.append(newCronJobs.get(i)); 
-            if(i != newCronJobs.size() -1){
-                allCronJobs.append("\n");
-            }
+            allCronJobs.append("\n");
         } 
 
-        Files.write(temp.toPath(), allCronJobs.toString().getBytes(), StandardOpenOption.WRITE);
+        Files.write(temp.toPath(), allCronJobs.toString().getBytes());
 
         //redirect temp file to set new cron jobs 
-        ProcessBuilder pb2 = new ProcessBuilder("temp > crontab"); 
-        pb2.start();
+        ProcessBuilder pb2 = new ProcessBuilder("/usr/bin/crontab"); 
+        pb2.redirectInput(temp);
+        Process p2 = pb2.start();
+        p2.waitFor();
+
+        Utils.printMsg("Job set! Feed will be automatically generated and sent everyday at " + hour + ":" + minute);
+
+
     }
 }
