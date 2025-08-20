@@ -1,5 +1,8 @@
 package com.buzoTechie.RssFeedAggregator;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class Utils {
     public static void printError(String msg){
         StringBuilder sb = new StringBuilder(); 
@@ -20,5 +23,9 @@ public class Utils {
         sb.append("RSSFeedAggregator > --INFO--: "); 
         sb.append(msg); 
         System.out.println(sb.toString());
+    }
+
+    public static String getAbsPath(String relPath){
+        return Paths.get(relPath).toAbsolutePath().toString();
     }
 }

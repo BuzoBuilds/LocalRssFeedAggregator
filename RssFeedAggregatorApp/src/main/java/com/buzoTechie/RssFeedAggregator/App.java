@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,16 +21,30 @@ import org.xml.sax.SAXException;
 public class App { 
 
     ArticlesModule articlesModule; 
-    EmailModule emailModule;
+    EmailModule emailModule;  
+    private final String resDirPath = "../res/";
+    private final String articleSrcFilePath = resDirPath + "articleSources";
+    private final String addressBookPath = resDirPath + "addressBook"; 
+    private final String jobsLogFilePath = "../logs/jobLogs";
+    private final String jobScriptPath = "../genAndSendFeed.sh";
+    private final String configFilePath = "../userConfig";
+    private final String configedCronPath; 
+    private final String configedEmailCredsPath;
     public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException {
         App rssApp = new App(); 
         rssApp.runCLI();
     } 
 
 
-    public App() throws ParserConfigurationException, SAXException, IOException{
-        articlesModule = new ArticlesModule("/home/amby/reposTheBuzoTechie/rssFeedAggregator/res/articleSources", 50, 500); 
-        emailModule = new EmailModule("/home/amby/ProjCreds/rssEmailCreds", "/home/amby/reposTheBuzoTechie/rssFeedAggregator/res/addressBook");
+    public App() throws ParserConfigurationException, SAXException, IOException{ 
+        Path configFile = Path.of(configFilePath); 
+        List<String> configs = Files.readAllLines(configFile);  
+        String[] configLine = configs.get(1).split(",");
+        this.configedEmailCredsPath = configLine[0]; 
+        this.configedCronPath = configLine[1]; 
+
+        articlesModule = new ArticlesModule(articleSrcFilePath, 50, 500); 
+        emailModule = new EmailModule(configedEmailCredsPath, addressBookPath);
     }
 
     private void runCLI(){
@@ -189,6 +204,7 @@ public class App {
         try {
             feed = articlesModule.getFeed();
             emailModule.sendEmailToAddressesInAddressBook("GEEK FEED", feed);
+            Utils.printMsg("Successfully generated and sent feed to all emails in address book!");
         } catch (IOException | ParserConfigurationException | SAXException e) {
             e.printStackTrace();
             Utils.printError("Unable to generate feed, please try again later");
@@ -210,7 +226,7 @@ public class App {
     private void setDailyJob(int hour, int minute) throws IOException, InterruptedException{
         //get current crontab jobs
         File temp = new File("temp");  
-        ProcessBuilder pb = new ProcessBuilder("/usr/bin/crontab", "-l"); 
+        ProcessBuilder pb = new ProcessBuilder(configedCronPath, "-l"); 
         pb.redirectOutput(temp);  
         Process p1 = pb.start();
         p1.waitFor();
@@ -221,7 +237,7 @@ public class App {
         //remove any potential rssAggreator jobs
         List<String> newCronJobs = new ArrayList<String>(); 
         for(int i = 0; i < currCronJobs.size(); i++){
-            if(!currCronJobs.get(i).contains("rssFeedAggregator/genAndSendFeed.sh")){
+            if(!currCronJobs.get(i).contains("genAndSendFeed.sh")){
                 newCronJobs.add(currCronJobs.get(i));
             }
         } 
@@ -231,7 +247,7 @@ public class App {
         sb.append(minute); 
         sb.append(" "); 
         sb.append(hour); 
-        sb.append(" * * * ~/reposTheBuzoTechie/rssFeedAggregator/genAndSendFeed.sh >> ~/rssLog 2>&1");
+        sb.append(" * * * " + Utils.getAbsPath(jobScriptPath) + " >> " + Utils.getAbsPath(jobsLogFilePath) + " 2>&1");
         newCronJobs.add(sb.toString());  
 
         StringBuilder allCronJobs = new StringBuilder();
@@ -243,7 +259,7 @@ public class App {
         Files.write(temp.toPath(), allCronJobs.toString().getBytes());
 
         //redirect temp file to set new cron jobs 
-        ProcessBuilder pb2 = new ProcessBuilder("/usr/bin/crontab"); 
+        ProcessBuilder pb2 = new ProcessBuilder(configedCronPath); 
         pb2.redirectInput(temp);
         Process p2 = pb2.start();
         p2.waitFor();
@@ -252,4 +268,5 @@ public class App {
 
         Utils.printMsg("Job set! Feed will be automatically generated and sent everyday at " + String.format("%02d", hour) + ":" + String.format("%02d", minute));
     }
+
 }
